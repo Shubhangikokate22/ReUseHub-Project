@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "ReUseHub",
+    "slug": "reusehub",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/branding/reusehub-app-icon.png",
+    "scheme": "reusehub",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "icon": "./assets/branding/reusehub-app-icon.png"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F7F8F3",
+        "foregroundImage": "./assets/branding/reusehub-mark.png",
+        "monochromeImage": "./assets/branding/reusehub-mark.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/branding/reusehub-app-icon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F7F8F3",
+          "image": "./assets/branding/reusehub-mark.png",
+          "imageWidth": 140
+        }
+      ],
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

@@ -1,0 +1,429 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum ItemCondition {
+  NEW
+  LIKE_NEW
+  GOOD
+  FAIR
+}
+
+enum ItemStatus {
+  AVAILABLE
+  REQUESTED
+  EXCHANGED
+  SOLD
+  DONATED
+  REMOVED
+}
+
+enum ExchangeType {
+  EXCHANGE
+  DONATION
+  SALE
+}
+
+enum RequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+  COMPLETED
+}
+
+enum HandoverStatus {
+  PROPOSED
+  REJECTED
+  ACCEPTED
+  COMPLETED
+}
+
+enum CampaignDonationStatus {
+  SUBMITTED
+  RECEIVED
+  COMPLETED
+  CANCELLED
+}
+
+enum SustainabilityEventType {
+  EXCHANGE_COMPLETED
+  DONATION_COMPLETED
+  SALE_COMPLETED
+}
+
+enum ConfidenceLevel {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+model User {
+  id                String             @id @default(cuid())
+  name              String             @db.VarChar(100)
+  email             String             @unique @db.VarChar(254)
+  password          String             @db.VarChar(255)
+  role              UserRole           @default(USER)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  items             Item[]             @relation("ItemOwner")
+  sentRequests      ExchangeRequest[]  @relation("RequestRequester")
+  receivedRequests  ExchangeRequest[]  @relation("RequestOwner")
+  donations         Donation[]         @relation("DonationDonor")
+  notifications     Notification[]     @relation("NotificationRecipient")
+  actorNotifications Notification[]    @relation("NotificationActor")
+  sustainabilityMetrics SustainabilityMetric[]
+  wishlistEntries    Wishlist[]
+  sentChatMessages   ChatMessage[]       @relation("ChatSender")
+  ratingsGiven       Rating[]            @relation("RatingAuthor")
+  ratingsReceived    Rating[]            @relation("RatingTarget")
+  lifecycleEvents    ItemLifecycleEvent[] @relation("LifecycleActor")
+  reports            ItemReport[]         @relation("ReportAuthor")
+  goals              SustainabilityGoal[]
+  campaignContributions CampaignContribution[]
+  campaignDonations    CampaignDonation[]
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique @db.VarChar(80)
+  slug      String   @unique @db.VarChar(90)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  items     Item[]
+}
+
+model Item {
+  id                    String            @id @default(cuid())
+  title                 String            @db.VarChar(150)
+  description           String            @db.Text
+  condition             ItemCondition
+  status                ItemStatus        @default(AVAILABLE)
+  exchangeType          ExchangeType      @default(EXCHANGE)
+  exchangePreferredCategories Json?
+  estimatedWeightKg     Decimal?          @db.Decimal(8, 3)
+  price                 Decimal?          @db.Decimal(10, 2)
+  priceNegotiable       Boolean           @default(false)
+  activeExchangeRequestId String?
+  ownerId               String
+  categoryId            String
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  owner                 User              @relation("ItemOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  category              Category          @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  images                ItemImage[]
+  requests              ExchangeRequest[]
+  offeredInRequests     ExchangeRequest[] @relation("ExchangeOffer")
+  activeExchangeRequest ExchangeRequest? @relation("ActiveExchangeItems", fields: [activeExchangeRequestId], references: [id], onDelete: SetNull)
+  donation              Donation?
+  sustainabilityMetrics SustainabilityMetric[]
+  wishlistEntries        Wishlist[]
+  sustainabilityCalculation SustainabilityCalculation?
+  lifecycleEvents      ItemLifecycleEvent[]
+  reports              ItemReport[]
+
+  @@index([status, createdAt])
+  @@index([categoryId, status])
+  @@index([ownerId, createdAt])
+  @@index([title])
+  @@index([activeExchangeRequestId])
+}
+
+model Wishlist {
+  id        String   @id @default(cuid())
+  userId    String
+  itemId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemId])
+  @@index([userId, createdAt])
+  @@index([itemId])
+}
+
+model ItemImage {
+  id            String   @id @default(cuid())
+  itemId        String
+  url           String   @db.VarChar(2048)
+  storageSizeBytes Int?
+  mimeType      String?  @db.VarChar(100)
+  createdAt     DateTime @default(now())
+  item          Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId, createdAt])
+}
+
+model ExchangeRequest {
+  id          String        @id @default(cuid())
+  itemId      String
+  offeredItemId String?
+  requesterId String
+  ownerId     String
+  message     String?       @db.VarChar(1000)
+  status      RequestStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  item        Item          @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  requester   User          @relation("RequestRequester", fields: [requesterId], references: [id], onDelete: Restrict)
+  owner       User          @relation("RequestOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  notifications Notification[]
+  ratings       Rating[]
+  lifecycleEvents ItemLifecycleEvent[]
+  chat          Chat?
+  pickupLocation String? @db.VarChar(80)
+  transportMode String? @db.VarChar(30)
+  pickupNote    String? @db.VarChar(500)
+  handoverMeetingPoint String? @db.VarChar(30)
+  handoverOtherPoint String? @db.VarChar(50)
+  handoverDate String? @db.VarChar(10)
+  handoverTime String? @db.VarChar(5)
+  handoverCodeHash String? @db.VarChar(64)
+  handoverCodeGeneratedAt DateTime?
+  handoverCodeAttempts Int @default(0)
+  handoverLockedUntil DateTime?
+  handoverStatus HandoverStatus?
+  activeItemId String? @unique @db.VarChar(191)
+  activeOfferedItemId String? @unique @db.VarChar(191)
+  lockedItems Item[] @relation("ActiveExchangeItems")
+  offeredItem Item? @relation("ExchangeOffer", fields: [offeredItemId], references: [id], onDelete: Restrict)
+
+  @@index([itemId, requesterId, status])
+  @@index([ownerId, status, createdAt])
+  @@index([requesterId, status, createdAt])
+  @@index([offeredItemId])
+}
+
+model Donation {
+  id        String   @id @default(cuid())
+  itemId    String   @unique
+  donorId   String
+  createdAt DateTime @default(now())
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  donor     User     @relation("DonationDonor", fields: [donorId], references: [id], onDelete: Restrict)
+  campaignContributions CampaignContribution[]
+
+  @@index([donorId, createdAt])
+}
+
+model Notification {
+  id                 String          @id @default(cuid())
+  recipientId        String
+  actorId            String?
+  exchangeRequestId  String?
+  type               String          @db.VarChar(60)
+  message            String          @db.VarChar(500)
+  readAt             DateTime?
+  createdAt          DateTime        @default(now())
+  recipient          User            @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  actor              User?           @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  exchangeRequest    ExchangeRequest? @relation(fields: [exchangeRequestId], references: [id], onDelete: SetNull)
+
+  @@index([recipientId, readAt, createdAt])
+}
+
+model SustainabilityMetric {
+  id                    String                  @id @default(cuid())
+  userId                String
+  itemId                String
+  eventType             SustainabilityEventType
+  estimatedWasteAvoidedKg Decimal?               @db.Decimal(8, 3)
+  estimatedCo2eAvoidedKg Decimal?               @db.Decimal(8, 3)
+  createdAt             DateTime                @default(now())
+  user                  User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  item                  Item                    @relation(fields: [itemId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, itemId, eventType])
+  @@index([userId, createdAt])
+  @@index([eventType, createdAt])
+}
+
+model EmissionFactor {
+  id                String          @id @default(cuid())
+  category          String          @db.VarChar(80)
+  subcategory       String          @db.VarChar(100)
+  factorKgCO2e      Decimal?        @db.Decimal(10, 3)
+  unit              String          @db.VarChar(50)
+  lifecycleBoundary String          @db.VarChar(180)
+  sourceName        String          @db.VarChar(255)
+  sourceUrl         String          @db.VarChar(2048)
+  sourceYear        Int?
+  confidenceLevel   ConfidenceLevel
+  notes             String?         @db.Text
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  calculations      SustainabilityCalculation[]
+
+  @@unique([category, subcategory])
+  @@index([confidenceLevel])
+}
+
+model SustainabilityCalculation {
+  id                     String                  @id @default(cuid())
+  itemId                 String                  @unique
+  emissionFactorId       String?
+  eventType              SustainabilityEventType
+  referenceFactor        Decimal?                @db.Decimal(10, 3)
+  displacementFactor     Decimal                 @db.Decimal(5, 4)
+  baselineEmissions      Decimal?                @db.Decimal(10, 3)
+  reuseScenarioEmissions Decimal                 @db.Decimal(10, 3)
+  transportEmissions     Decimal                 @db.Decimal(10, 3)
+  netAvoidedCO2e         Decimal?                @db.Decimal(10, 3)
+  confidenceLevel        ConfidenceLevel
+  assumptions            String                  @db.Text
+  calculatedAt           DateTime                @default(now())
+  item                   Item                    @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  emissionFactor         EmissionFactor?         @relation(fields: [emissionFactorId], references: [id], onDelete: SetNull)
+
+  @@index([eventType, calculatedAt])
+  @@index([confidenceLevel, calculatedAt])
+}
+
+model Chat {
+  id                String @id @default(cuid())
+  exchangeRequestId String @unique
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  exchangeRequest   ExchangeRequest @relation(fields: [exchangeRequestId], references: [id], onDelete: Cascade)
+  messages          ChatMessage[]
+}
+
+model ChatMessage {
+  id        String @id @default(cuid())
+  chatId    String
+  senderId  String
+  body      String @db.VarChar(2000)
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+  chat      Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender    User @relation("ChatSender", fields: [senderId], references: [id], onDelete: Restrict)
+
+  @@index([chatId, createdAt])
+  @@index([senderId, readAt])
+}
+
+model Rating {
+  id                String @id @default(cuid())
+  exchangeRequestId String
+  authorId          String
+  targetId          String
+  score             Int
+  feedback          String? @db.VarChar(1000)
+  createdAt         DateTime @default(now())
+  exchangeRequest   ExchangeRequest @relation(fields: [exchangeRequestId], references: [id], onDelete: Cascade)
+  author            User @relation("RatingAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  target            User @relation("RatingTarget", fields: [targetId], references: [id], onDelete: Restrict)
+
+  @@unique([exchangeRequestId, authorId])
+  @@index([targetId, createdAt])
+}
+
+model ItemLifecycleEvent {
+  id                String @id @default(cuid())
+  itemId            String
+  exchangeRequestId String?
+  actorId           String?
+  event             String @db.VarChar(60)
+  note              String? @db.VarChar(500)
+  createdAt         DateTime @default(now())
+  item              Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  exchangeRequest   ExchangeRequest? @relation(fields: [exchangeRequestId], references: [id], onDelete: SetNull)
+  actor             User? @relation("LifecycleActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([itemId, createdAt])
+  @@index([exchangeRequestId, createdAt])
+}
+
+model ItemReport {
+  id          String @id @default(cuid())
+  reporterId  String
+  itemId      String?
+  targetUserId String? @db.VarChar(191)
+  category    String @db.VarChar(50)
+  description String @db.VarChar(1500)
+  status      String @default("OPEN") @db.VarChar(30)
+  resolution  String? @db.VarChar(1000)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  reporter    User @relation("ReportAuthor", fields: [reporterId], references: [id], onDelete: Restrict)
+  item        Item? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([reporterId, createdAt])
+  @@index([targetUserId, status])
+}
+
+model DonationCampaign {
+  id          String @id @default(cuid())
+  title       String @db.VarChar(150)
+  description String @db.Text
+  neededItems String @db.Text
+  deadline    DateTime?
+  startDate   DateTime?
+  endDate     DateTime?
+  imageUrl    String? @db.VarChar(2048)
+  acceptedCategories String? @db.Text
+  location    String? @db.VarChar(200)
+  instructions String? @db.Text
+  coordinator String? @db.VarChar(150)
+  status      String @default("ACTIVE") @db.VarChar(30)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  contributions CampaignContribution[]
+  donations CampaignDonation[]
+
+  @@index([status, deadline])
+}
+
+model CampaignDonation {
+  id          String @id @default(cuid())
+  campaignId  String
+  userId      String
+  itemDetails String @db.VarChar(500)
+  category    String @db.VarChar(100)
+  status      CampaignDonationStatus @default(SUBMITTED)
+  submittedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  campaign    DonationCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user        User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([campaignId, status, submittedAt])
+  @@index([userId, submittedAt])
+}
+
+model CampaignContribution {
+  id         String @id @default(cuid())
+  campaignId String
+  donationId String
+  userId     String
+  createdAt  DateTime @default(now())
+  campaign   DonationCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  donation   Donation @relation(fields: [donationId], references: [id], onDelete: Cascade)
+  user       User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([campaignId, donationId])
+  @@index([campaignId, createdAt])
+}
+
+model SustainabilityGoal {
+  id          String @id @default(cuid())
+  userId      String
+  title       String @db.VarChar(150)
+  metric      String @db.VarChar(30)
+  target      Decimal @db.Decimal(10, 3)
+  deadline    DateTime?
+  createdAt   DateTime @default(now())
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}

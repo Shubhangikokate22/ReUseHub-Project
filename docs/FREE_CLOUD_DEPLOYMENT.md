@@ -21,7 +21,7 @@ When Render asks for environment variables, set:
 | Variable | Value |
 | --- | --- |
 | `DATABASE_URL` | TiDB's `mysql://user:password@host/reusehub` connection URL |
-| `DATABASE_SSL` | `true` (the Blueprint sets this) |
+| `DATABASE_SSL` | `true` (the Blueprint sets this). This also makes Prisma CLI use `sslaccept=strict` for verified TLS when it runs migrations. |
 | `JWT_SECRET` | Generate a new random secret of at least 32 characters; Render can generate one |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
 | `CLOUDINARY_API_KEY` | Cloudinary API key |

@@ -7,7 +7,7 @@ The project supports **SDG 12: Responsible Consumption and Production**, SDG 11,
 ## Features
 
 - JWT registration and login, bcrypt password hashing, protected member and admin routes.
-- Searchable, filterable, paginated item browsing; sale listings with negotiable prices; item-for-item exchange requests with protected offers; donation requests; owner listing management and local photos.
+- Searchable, filterable, paginated item browsing; sale listings with negotiable prices; item-for-item exchange requests with protected offers; donation requests; owner listing management and item photos.
 - Database-backed wishlists with duplicate prevention, rule-based recommendations, and item sustainability-potential scores.
 - Exchange, donation, and sale requests with multiple requesters per listing, one active transaction, holder-proposed handovers, buyer-generated verification codes, read-only completed chats, participant notifications, and request history. Exchanges link two student-owned items and lock both until completion or cancellation.
 - Admin-managed donation campaigns with official locations, schedules, accepted categories, campaign instructions, images, and separately tracked student submissions.
@@ -24,7 +24,7 @@ backend/ Express 5, Node.js TypeScript stripping, Prisma 7.10, MySQL
 docs/    API collection and estimation notes
 ```
 
-Images are stored locally under `backend/uploads` and served from `/uploads`. The `ItemImage` metadata model is separate from storage so a cloud image provider can be added later.
+For local development, images are stored under `backend/uploads` and served from `/uploads`. For cloud deployment, the backend supports Cloudinary storage so item and campaign photos survive server restarts.
 
 ## Requirements
 
@@ -77,6 +77,10 @@ Remove-Item Env:ADMIN_EMAIL
 
 The API URL is configuration, not a secret. The JWT is stored in Expo SecureStore on native platforms and in tab `sessionStorage` on web.
 
+## Free cloud deployment
+
+See [docs/FREE_CLOUD_DEPLOYMENT.md](docs/FREE_CLOUD_DEPLOYMENT.md) for the free-tier setup using Render for the API, TiDB Cloud Starter for MySQL, and Cloudinary for persistent photos. Render's free API may sleep while idle, so the first request after inactivity can take about a minute. After the API is deployed, build a new APK with its public HTTPS API URL; existing APKs continue to use the API URL they were built with.
+
 ## Checks
 
 ```powershell
@@ -108,10 +112,10 @@ Responses use ordinary JSON objects; errors include an `error` message. Listing 
 ## Green IT and limitations
 
 - The item feed, search, and admin lists use server-side pagination and database filtering.
-- Photos are resized to a maximum 1280 px edge and compressed before upload. Current storage is local disk and needs backups for deployment.
+- Photos are resized to a maximum 1280 px edge and compressed before upload. Local development stores them on disk; cloud deployment stores them in Cloudinary.
 - CO2e estimates use source-backed lifecycle reference factors and a configurable displacement assumption. The calculation and its limitations are described in [docs/sustainability-methodology.md](docs/sustainability-methodology.md). They are estimates, not measured savings or a complete LCA.
 - The app does not collect campus energy or data-center measurements, so it does not claim actual PUE or energy savings.
 
 ## Feature status
 
-The staged expansion includes the marketplace, saved listings, multi-image uploads, complete item detail photos with a swipeable full-screen viewer, recommendations, item-for-item exchanges that lock both offered items, multi-request handovers with buyer-generated codes, transaction chat, ratings, lifecycle events, user/item reporting with admin review, admin-controlled donation campaigns, activity-based achievements and goals, and sustainability dashboards. Completed transaction chats remain visible as read-only history. Green IT reports measured stored-image and API request metrics; it does not infer unmeasured energy savings. QR image generation and scanning are not yet implemented. There is no department-wise sustainability functionality. Cloud image storage, email verification, production deployment, and field validation of impact factors are also future work.
+The staged expansion includes the marketplace, saved listings, multi-image uploads, complete item detail photos with a swipeable full-screen viewer, recommendations, item-for-item exchanges that lock both offered items, multi-request handovers with buyer-generated codes, transaction chat, ratings, lifecycle events, user/item reporting with admin review, admin-controlled donation campaigns, activity-based achievements and goals, and sustainability dashboards. Completed transaction chats remain visible as read-only history. Green IT reports measured stored-image and API request metrics; it does not infer unmeasured energy savings. QR image generation and scanning are not yet implemented. There is no department-wise sustainability functionality. Cloud image storage is supported when configured; production deployment, email verification, and field validation of impact factors are not yet completed.

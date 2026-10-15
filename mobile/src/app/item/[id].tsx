@@ -5,7 +5,7 @@ import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Text, TextInput
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/app-icon';
 import { useAuth } from '@/context/auth-context';
-import { apiRequest, API_BASE_URL } from '@/lib/api';
+import { apiRequest, resolveMediaUrl } from '@/lib/api';
 import type { Category, Item } from '@/types/models';
 
 type ItemResponse = { item: Item };
@@ -166,12 +166,12 @@ export default function ItemDetailsScreen() {
         <Pressable onPress={() => router.back()} style={styles.back}><Text style={styles.backText}>‹  Back to browsing</Text></Pressable>
         {item.images.length ? <>
           <Pressable onPress={() => setImageViewerOpen(true)} accessibilityRole="button" accessibilityLabel="View full image" style={[styles.imageFrame, { width: Math.min(screenWidth - 40, 760), height: Math.min(Math.max(screenWidth * 0.78, 250), screenHeight * 0.48, 480) }]}>
-            <Image source={{ uri: `${API_BASE_URL.replace(/\/api$/, '')}${item.images[Math.min(selectedImage, item.images.length - 1)].url}` }} contentFit="contain" transition={150} style={styles.fullImage} />
+            <Image source={{ uri: `${resolveMediaUrl(item.images[Math.min(selectedImage, item.images.length - 1)].url)}` }} contentFit="contain" transition={150} style={styles.fullImage} />
             <Text style={styles.imageCount}>{selectedImage + 1} / {item.images.length} ? Tap to view full screen</Text>
           </Pressable>
-          {item.images.length > 1 ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.imageThumbRail}>{item.images.map((image, index) => <Pressable key={image.id} onPress={() => setSelectedImage(index)} accessibilityRole="button" accessibilityLabel={`Show photo ${index + 1}`} style={[styles.imageThumbWrap, selectedImage === index && styles.imageThumbSelected]}><Image source={{ uri: `${API_BASE_URL.replace(/\/api$/, '')}${image.url}` }} contentFit="cover" style={styles.imageThumb} /></Pressable>)}</ScrollView> : null}
+          {item.images.length > 1 ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.imageThumbRail}>{item.images.map((image, index) => <Pressable key={image.id} onPress={() => setSelectedImage(index)} accessibilityRole="button" accessibilityLabel={`Show photo ${index + 1}`} style={[styles.imageThumbWrap, selectedImage === index && styles.imageThumbSelected]}><Image source={{ uri: `${resolveMediaUrl(image.url)}` }} contentFit="cover" style={styles.imageThumb} /></Pressable>)}</ScrollView> : null}
           <Modal visible={imageViewerOpen} animationType="fade" onRequestClose={() => setImageViewerOpen(false)} statusBarTranslucent>
-            <View style={styles.viewer}><Pressable onPress={() => setImageViewerOpen(false)} style={styles.viewerClose}><Text style={styles.viewerCloseText}>Close</Text></Pressable><ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} contentOffset={{ x: selectedImage * screenWidth, y: 0 }} onMomentumScrollEnd={(event) => setSelectedImage(Math.round(event.nativeEvent.contentOffset.x / screenWidth))}>{item.images.map((image) => <View key={image.id} style={{ width: screenWidth, height: screenHeight, alignItems: 'center', justifyContent: 'center' }}><Image source={{ uri: `${API_BASE_URL.replace(/\/api$/, '')}${image.url}` }} contentFit="contain" style={{ width: screenWidth, height: screenHeight * 0.86 }} /></View>)}</ScrollView><Text style={styles.viewerCount}>{selectedImage + 1} / {item.images.length}</Text></View>
+            <View style={styles.viewer}><Pressable onPress={() => setImageViewerOpen(false)} style={styles.viewerClose}><Text style={styles.viewerCloseText}>Close</Text></Pressable><ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} contentOffset={{ x: selectedImage * screenWidth, y: 0 }} onMomentumScrollEnd={(event) => setSelectedImage(Math.round(event.nativeEvent.contentOffset.x / screenWidth))}>{item.images.map((image) => <View key={image.id} style={{ width: screenWidth, height: screenHeight, alignItems: 'center', justifyContent: 'center' }}><Image source={{ uri: `${resolveMediaUrl(image.url)}` }} contentFit="contain" style={{ width: screenWidth, height: screenHeight * 0.86 }} /></View>)}</ScrollView><Text style={styles.viewerCount}>{selectedImage + 1} / {item.images.length}</Text></View>
           </Modal>
         </> : <View style={[styles.image, styles.placeholder]}><Text style={styles.placeholderMark}>?</Text><Text style={styles.muted}>Ready for a new chapter</Text></View>}
 

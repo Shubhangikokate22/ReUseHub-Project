@@ -7,7 +7,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, type ImageStyle, type TextStyle, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/auth-context';
-import { apiRequest, API_BASE_URL } from '@/lib/api';
+import { apiRequest, resolveMediaUrl } from '@/lib/api';
 import type { Category, Item, ItemImage } from '@/types/models';
 
 type CategoriesResponse = { categories: Category[] };
@@ -193,7 +193,7 @@ export default function AddItemScreen() {
 
   if (loading) return <View style={styles.loading}><ActivityIndicator color="#237A57" /></View>;
 
-  const displayedPhoto = existingImages[0]?.url ? `${API_BASE_URL.replace(/\/api$/, '')}${existingImages[0].url}` : photos[0]?.uri ?? null;
+  const displayedPhoto = existingImages[0]?.url ? `${resolveMediaUrl(existingImages[0].url)}` : photos[0]?.uri ?? null;
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -209,7 +209,7 @@ export default function AddItemScreen() {
           {photos.length ? <Text style={styles.imageSize}>{photos.length} new photo(s) selected and resized for upload</Text> : existingImages.length ? <Text style={styles.imageSize}>{existingImages.length} stored photo(s) ? {Math.round(existingImages.reduce((sum, image) => sum + (image.storageSizeBytes ?? 0), 0) / 1024)} KB total</Text> : null}
           <Pressable onPress={() => void choosePhoto()} style={styles.photoAction}><Text style={styles.photoActionText}>{existingImages.length + photos.length ? `Add photos (${existingImages.length + photos.length}/${MAX_ITEM_IMAGES})` : 'Choose photos from device'}</Text></Pressable>
           {existingImages.length + photos.length ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbnailRail}>
-            {existingImages.map((image, index) => <View key={image.id} style={styles.thumbnailWrap}><Image source={{ uri: `${API_BASE_URL.replace(/\/api$/, '')}${image.url}` }} contentFit="cover" style={styles.thumbnail} /><Pressable onPress={() => void removeExistingImage(image)} style={styles.removeThumbnail}><Text style={styles.removeThumbnailText}>{String.fromCharCode(215)}</Text></Pressable>{index === 0 ? <Text style={styles.primaryImageTag}>Primary</Text> : null}</View>)}
+            {existingImages.map((image, index) => <View key={image.id} style={styles.thumbnailWrap}><Image source={{ uri: `${resolveMediaUrl(image.url)}` }} contentFit="cover" style={styles.thumbnail} /><Pressable onPress={() => void removeExistingImage(image)} style={styles.removeThumbnail}><Text style={styles.removeThumbnailText}>{String.fromCharCode(215)}</Text></Pressable>{index === 0 ? <Text style={styles.primaryImageTag}>Primary</Text> : null}</View>)}
             {photos.map((selected, index) => <View key={`${selected.uri}-${index}`} style={styles.thumbnailWrap}><Image source={{ uri: selected.uri }} contentFit="cover" style={styles.thumbnail} /><Pressable onPress={() => setPhotos((current) => current.filter((_, currentIndex) => currentIndex !== index))} style={styles.removeThumbnail}><Text style={styles.removeThumbnailText}>{String.fromCharCode(215)}</Text></Pressable>{existingImages.length === 0 && index === 0 ? <Text style={styles.primaryImageTag}>Primary</Text> : null}</View>)}
           </ScrollView> : null}
 

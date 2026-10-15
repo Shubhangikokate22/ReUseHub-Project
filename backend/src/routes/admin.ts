@@ -1,15 +1,13 @@
 import { Router } from "express";
 import type { Response } from "express";
-import { randomUUID } from "node:crypto";
-import { mkdir, unlink, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { ItemStatus, RequestStatus, SustainabilityEventType } from "../../generated/prisma/enums.ts";
 import { prisma } from "../database.ts";
 import { requireAdmin, requireAuth } from "../middleware/auth.ts";
 import { validateCampaignSchedule } from "../services/campaign-schedule.ts";
-import { detectImage, imageFilename, uploadImage } from "./items.ts";
+import { detectImage, uploadImage } from "./items.ts";
 import { ESTIMATE_LABEL, ESTIMATE_METHODOLOGY, summarizeCampusMetrics } from "../services/sustainability.ts";
 import { getApiEfficiencyMetrics } from "../services/runtime-metrics.ts";
+import { deleteStoredImage, storeImage } from "../services/image-storage.ts";
 
 const router = Router();
 const itemStatuses = Object.values(ItemStatus);
@@ -176,14 +174,13 @@ router.patch("/campaigns/:id", requireAuth, requireAdmin, async (request, respon
     const current = await prisma.donationCampaign.findUnique({ where: { id: request.params.id }, select: { imageUrl: true } });
     if (!current) { response.status(404).json({ error: "Campaign not found." }); return; }
     const campaign = await prisma.donationCampaign.update({ where: { id: request.params.id }, data: data as never });
-    const oldImage = current.imageUrl ? imageFilename(current.imageUrl) : undefined;
-    if (oldImage && Object.hasOwn(data, "imageUrl") && data.imageUrl !== current.imageUrl) await unlink(path.resolve(process.cwd(), "uploads", oldImage)).catch(() => undefined);
+    if (current.imageUrl && Object.hasOwn(data, "imageUrl") && data.imageUrl !== current.imageUrl) await deleteStoredImage(current.imageUrl).catch(() => undefined);
     response.json({ campaign });
   } catch { response.status(404).json({ error: "Campaign not found." }); }
 });
 
 router.delete("/campaigns/:id", requireAuth, requireAdmin, async (request, response) => {
-  try { const campaign = await prisma.donationCampaign.delete({ where: { id: request.params.id }, select: { imageUrl: true } }); const filename = campaign.imageUrl ? imageFilename(campaign.imageUrl) : undefined; if (filename) await unlink(path.resolve(process.cwd(), "uploads", filename)).catch(() => undefined); response.json({ message: "Campaign deleted." }); }
+  try { const campaign = await prisma.donationCampaign.delete({ where: { id: request.params.id }, select: { imageUrl: true } }); if (campaign.imageUrl) await deleteStoredImage(campaign.imageUrl).catch(() => undefined); response.json({ message: "Campaign deleted." }); }
   catch { response.status(404).json({ error: "Campaign not found." }); }
 });
 
@@ -195,17 +192,13 @@ router.post("/campaigns/:id/image", requireAuth, requireAdmin, uploadImage, asyn
   try {
     const current = await prisma.donationCampaign.findUnique({ where: { id: request.params.id }, select: { imageUrl: true } });
     if (!current) { response.status(404).json({ error: "Campaign not found." }); return; }
-    const filename = `${randomUUID()}.${detected.extension}`;
-    const uploadDirectory = path.resolve(process.cwd(), "uploads");
-    await mkdir(uploadDirectory, { recursive: true });
-    await writeFile(path.join(uploadDirectory, filename), file.buffer, { flag: "wx" });
+    const imageUrl = await storeImage(file.buffer, detected.mimeType, "campaigns");
     try {
-      const campaign = await prisma.donationCampaign.update({ where: { id: request.params.id }, data: { imageUrl: `/uploads/${filename}` } });
-      const oldFilename = current.imageUrl ? imageFilename(current.imageUrl) : undefined;
-      if (oldFilename) await unlink(path.join(uploadDirectory, oldFilename)).catch(() => undefined);
+      const campaign = await prisma.donationCampaign.update({ where: { id: request.params.id }, data: { imageUrl } });
+      if (current.imageUrl) await deleteStoredImage(current.imageUrl).catch(() => undefined);
       response.json({ campaign });
     } catch (error) {
-      await unlink(path.join(uploadDirectory, filename)).catch(() => undefined);
+      await deleteStoredImage(imageUrl).catch(() => undefined);
       throw error;
     }
   } catch { response.status(500).json({ error: "Could not save the campaign image." }); }

@@ -1,13 +1,13 @@
 import { Image } from 'expo-image';
 import { Pressable, Text, View, type ImageStyle, type TextStyle, type ViewStyle } from 'react-native';
 import { AppIcon } from '@/components/app-icon';
-import { API_BASE_URL } from '@/lib/api';
+import { resolveMediaUrl } from '@/lib/api';
 import type { Item } from '@/types/models';
 
 type Props = { item: Item; onPress: () => void; compact?: boolean; saved?: boolean; onToggleSaved?: () => void };
 
 export function ItemCard({ item, onPress, compact = false, saved = false, onToggleSaved }: Props) {
-  const imageUrl = item.images[0]?.url ? `${API_BASE_URL.replace(/\/api$/, '')}${item.images[0].url}` : null;
+  const imageUrl = item.images[0]?.url ? `${resolveMediaUrl(item.images[0].url)}` : null;
   const typeLabel = item.exchangeType === 'DONATION' ? 'DONATION' : item.exchangeType === 'SALE' ? 'FOR SALE' : 'EXCHANGE';
   const typeIcon = item.exchangeType === 'DONATION' ? 'donate' : item.exchangeType === 'SALE' ? 'sell' : 'exchange';
   return (

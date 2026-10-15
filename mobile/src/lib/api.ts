@@ -11,6 +11,12 @@ const host = expoHost
 
 export const API_BASE_URL = (process.env.EXPO_PUBLIC_API_URL ?? `http://${host}:5000/api`).replace(/\/$/, '');
 
+export function resolveMediaUrl(url: string): string {
+  if (/^https?:\/\//i.test(url)) return url;
+  const origin = API_BASE_URL.replace(/\/api$/, '');
+  return `${origin}${url.startsWith('/') ? url : `/${url}`}`;
+}
+
 export class ApiError extends Error {
   status: number;
 
@@ -54,9 +60,9 @@ export async function apiRequest<T>(path: string, options: ApiOptions = {}): Pro
     });
   } catch (cause) {
     if (cause instanceof Error && cause.name === 'AbortError') {
-      throw new ApiError(0, `ReUseHub did not respond within ${Math.ceil(timeoutMs / 1000)} seconds at ${API_BASE_URL}. Check that your phone and laptop are on the same Wi-Fi network, then try again.`);
+      throw new ApiError(0, `ReUseHub did not respond within ${Math.ceil(timeoutMs / 1000)} seconds at ${API_BASE_URL}. Check your internet connection and try again.`);
     }
-    throw new ApiError(0, `Could not reach ReUseHub at ${API_BASE_URL}. Check that the backend is running and the phone is on the same Wi-Fi network.`);
+    throw new ApiError(0, `Could not reach ReUseHub at ${API_BASE_URL}. Check your internet connection and try again.`);
   } finally {
     clearTimeout(timeout);
   }

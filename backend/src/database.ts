@@ -19,6 +19,10 @@ function getDatabaseConfig() {
     throw new Error("DATABASE_URL must include a database name.");
   }
 
+  // MySQL 8 often uses caching_sha2_password locally. Permit its public key
+  // exchange only for loopback connections; remote databases should use TLS.
+  const isLoopback = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+
   return {
     host: url.hostname,
     port: Number(url.port) || 3306,
@@ -26,6 +30,8 @@ function getDatabaseConfig() {
     password: decodeURIComponent(url.password),
     database,
     connectionLimit: Number(url.searchParams.get("connection_limit")) || 5,
+    ssl: process.env.DATABASE_SSL === "true" ? { rejectUnauthorized: true } : undefined,
+    allowPublicKeyRetrieval: isLoopback,
   };
 }
 

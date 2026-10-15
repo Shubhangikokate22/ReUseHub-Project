@@ -11,6 +11,7 @@
       "icon": "./assets/branding/reusehub-app-icon.png"
     },
     "android": {
+      "package": "com.reusehub.campus",
       "adaptiveIcon": {
         "backgroundColor": "#F7F8F3",
         "foregroundImage": "./assets/branding/reusehub-mark.png",
@@ -37,6 +38,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7c3e07f9-df4b-4af0-bc42-3d8a346764b7"
+      }
     }
   }
 }

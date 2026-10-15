@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/auth-context';
-import { apiRequest, API_BASE_URL } from '@/lib/api';
+import { apiRequest, resolveMediaUrl } from '@/lib/api';
 import type { Item } from '@/types/models';
 
 type ItemResponse = { item: Item };
@@ -59,7 +59,7 @@ export default function ExchangeRequestScreen() {
     }
   }
 
-  const photo = (item: Item | null) => item?.images?.[0]?.url ? `${API_BASE_URL.replace(/\/api$/, '')}${item.images[0].url}` : null;
+  const photo = (item: Item | null) => item?.images?.[0]?.url ? `${resolveMediaUrl(item.images[0].url)}` : null;
 
   return <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F8F3' }} edges={['top']}>
     <ScrollView contentContainerStyle={{ width: '100%', maxWidth: 700, alignSelf: 'center', padding: 20, paddingBottom: 42 }}>

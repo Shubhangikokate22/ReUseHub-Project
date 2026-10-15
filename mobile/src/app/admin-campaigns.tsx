@@ -8,7 +8,7 @@ import { Redirect } from 'expo-router';
 import { Alert, Modal, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { ActionButton, cardStyle, EmptyState, ErrorState, LoadingState, PageShell } from '@/components/page-shell';
 import { useAuth } from '@/context/auth-context';
-import { apiRequest, API_BASE_URL, ApiError } from '@/lib/api';
+import { apiRequest, ApiError, resolveMediaUrl } from '@/lib/api';
 
 type Category = { id: string; name: string; slug: string };
 type Campaign = { id: string; title: string; description: string; neededItems: string; acceptedCategories: string | null; location: string | null; instructions: string | null; coordinator: string | null; imageUrl: string | null; startDate: string | null; endDate: string | null; status: string; _count: { donations: number } };
@@ -222,7 +222,7 @@ export default function AdminCampaignsScreen() {
       <Text style={labelStyle}>Instructions (optional)</Text><TextInput value={form.instructions} onChangeText={(value) => change('instructions', value)} placeholder="Drop-off details" placeholderTextColor="#849087" multiline style={[inputStyle, { minHeight: 60, textAlignVertical: 'top' }]} />
       <Text style={labelStyle}>Coordinator (optional)</Text><TextInput value={form.coordinator} onChangeText={(value) => change('coordinator', value)} placeholder="Coordinator/contact" placeholderTextColor="#849087" style={inputStyle} />
       <View style={{ alignSelf: 'flex-start', marginTop: 12 }}><ActionButton label={imageUri ? 'Choose a different image' : form.imageUrl ? 'Replace campaign image' : 'Choose campaign image'} tone="quiet" disabled={Boolean(busy)} onPress={() => void chooseImage()} /></View>
-      {imageUri || form.imageUrl ? <Image source={{ uri: imageUri || (form.imageUrl.startsWith('/uploads/') ? `${API_BASE_URL.replace(/\/api$/, '')}${form.imageUrl}` : form.imageUrl) }} contentFit="cover" style={{ width: '100%', height: 145, borderRadius: 12, marginTop: 9 }} /> : null}
+      {imageUri || form.imageUrl ? <Image source={{ uri: imageUri || (form.imageUrl.startsWith('/uploads/') ? `${resolveMediaUrl(form.imageUrl)}` : form.imageUrl) }} contentFit="cover" style={{ width: '100%', height: 145, borderRadius: 12, marginTop: 9 }} /> : null}
       <TextInput value={form.imageUrl} onChangeText={(value) => change('imageUrl', value)} placeholder="Campaign image URL (optional)" placeholderTextColor="#849087" style={inputStyle} />
       {validation ? <ErrorState message={validation} /> : null}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 13 }}><ActionButton label={busy === 'save' ? 'Saving…' : editing ? 'Save changes' : 'Create campaign'} disabled={Boolean(busy)} onPress={() => void save()} />{editing ? <ActionButton label="Cancel edit" tone="quiet" onPress={() => { setEditing(''); setForm(emptyForm); setValidation(''); }} /> : null}</View>

@@ -1,15 +1,12 @@
 import { Router } from "express";
-import { randomUUID } from "node:crypto";
-import { mkdir, unlink, writeFile } from "node:fs/promises";
-import path from "node:path";
 import multer from "multer";
 import { ExchangeType, ItemCondition, ItemStatus, RequestStatus } from "../../generated/prisma/enums.ts";
 import { prisma } from "../database.ts";
 import { type AuthenticatedRequest, requireAuth } from "../middleware/auth.ts";
 import { calculateItemSustainabilityScore } from "../services/sustainability.ts";
+import { deleteStoredImage, localImageFilename, storeImage } from "../services/image-storage.ts";
 
 const router = Router();
-const uploadDirectory = path.resolve(process.cwd(), "uploads");
 const parseSingleImage = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024, files: 1 },
@@ -61,10 +58,7 @@ export function detectImage(buffer: Buffer): { extension: string; mimeType: stri
   return undefined;
 }
 
-export function imageFilename(url: string): string | undefined {
-  const match = /^\/uploads\/([a-f0-9-]+\.(?:jpg|png|webp))$/i.exec(url);
-  return match?.[1];
-}
+export const imageFilename = localImageFilename;
 
 function parseWeight(value: unknown): number | null | undefined {
   if (value === undefined) return undefined;
@@ -282,17 +276,14 @@ router.post("/:itemId/images", requireAuth, uploadImage, async (request, respons
       return;
     }
 
-    await mkdir(uploadDirectory, { recursive: true });
-    const filename = `${randomUUID()}.${detected.extension}`;
-    const url = `/uploads/${filename}`;
-    await writeFile(path.join(uploadDirectory, filename), file.buffer, { flag: "wx" });
+    const url = await storeImage(file.buffer, detected.mimeType, "items");
     try {
       const image = await prisma.itemImage.create({
         data: { itemId, url, storageSizeBytes: file.size, mimeType: detected.mimeType },
       });
       response.status(201).json({ image });
     } catch (error) {
-      await unlink(path.join(uploadDirectory, filename)).catch(() => undefined);
+      await deleteStoredImage(url).catch(() => undefined);
       throw error;
     }
   } catch {
@@ -319,8 +310,7 @@ router.delete("/:itemId/images/:imageId", requireAuth, async (request, response)
     }
 
     await prisma.itemImage.delete({ where: { id: image.id } });
-    const filename = imageFilename(image.url);
-    if (filename) await unlink(path.join(uploadDirectory, filename)).catch(() => undefined);
+    await deleteStoredImage(image.url).catch(() => undefined);
     response.json({ message: "Image removed." });
   } catch {
     response.status(500).json({ error: "Could not remove the item image." });

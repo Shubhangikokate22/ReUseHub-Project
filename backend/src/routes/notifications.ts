@@ -55,15 +55,20 @@ router.patch("/read-all", requireAuth, async (request, response) => {
 });
 
 router.patch("/:id/read", requireAuth, async (request, response) => {
+  const notificationId = request.params.id;
+  if (typeof notificationId !== "string" || !notificationId.trim()) {
+    response.status(400).json({ error: "Invalid notification id." });
+    return;
+  }
   const recipientId = (request as AuthenticatedRequest).auth?.userId;
   try {
     const result = await prisma.notification.updateMany({
-      where: { id: request.params.id, recipientId, readAt: null },
+      where: { id: notificationId, recipientId, readAt: null },
       data: { readAt: new Date() },
     });
     if (!result.count) {
       const existing = await prisma.notification.findFirst({
-        where: { id: request.params.id, recipientId },
+        where: { id: notificationId, recipientId },
         select: { id: true, readAt: true },
       });
       if (!existing) {
@@ -75,7 +80,7 @@ router.patch("/:id/read", requireAuth, async (request, response) => {
     }
 
     const notification = await prisma.notification.findFirst({
-      where: { id: request.params.id, recipientId },
+      where: { id: notificationId, recipientId },
       select: { id: true, readAt: true },
     });
     response.json({ notification });
